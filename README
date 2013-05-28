@@ -1,0 +1,21 @@
+[rawsend]
+
+This is a modified version of Cozybits initial code[1] for sending ethernet packets from one local interface to another.
+
+It is modified to mimic the behaviour of iperf, so that one can specify a rate to be transmitted 
+
+[usage]
+
+Since rawsend uses raw sockets, it has to be run as superuser.
+
+First, start the client by specifying the interface to listen on:
+
+   # ./server wlan1
+
+Then, start the client by specifying the source and destination interfaces as well as the rate in kbit/s and timeout in seconds:
+
+   # ./client wlan0 wlan1 500 10
+
+And if successful, the server and the client will print some results.
+
+[1] https://github.com/cozybit/wmediumd/tree/master/rawsocket

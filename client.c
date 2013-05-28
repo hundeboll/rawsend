@@ -190,10 +190,7 @@ double timeval_subtract(struct timeval *result, struct timeval *t2, struct timev
 /* calc interval in microseconds */
 int calc_interval(int rate)
 {
-    int kbit_per_packet = (PACKET_SIZE*8)/1024;
-    int packet_per_sec = rate/kbit_per_packet;
-
-    return 1000000/packet_per_sec;
+    return 1e6 * 8 / rate;
 }
 
 int main(int argc, char *argv[]) {

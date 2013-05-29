@@ -43,7 +43,8 @@ void print_result(struct raw_result *result)
     printf(" packets: %6u\n", result->packets);
     printf(" bytes:   %6u\n", result->bytes);
     printf(" rate:    %6.2f\n", rate);
-    printf(" loss:    %6.2f\n", 1 - (double)result->packets/(double)client_result.packets);
+    printf(" loss:    %6.2f\n", 1 - (double)result->packets/(double)(client_result.packets));
+    printf(" dups:    %6u\n", result->duplicates);
 }
 
 void print_server_result(struct raw_result *result)
@@ -52,6 +53,7 @@ void print_server_result(struct raw_result *result)
     result->useconds = ntohl(result->useconds);
     result->packets = ntohl(result->packets);
     result->bytes = ntohl(result->bytes);
+    result->duplicates = ntohl(result->duplicates);
 
     printf("server report:\n");
     print_result(result);
@@ -207,7 +209,7 @@ int main(int argc, char *argv[]) {
     if (argc < 4)
     {
         printf("Missing arguments.\n"
-                "%s [src_ifname] [dest_ifname] [kbit/s] \n", argv[0]);
+                "%s [src_ifname] [dest_ifname] [kbit/s] [seconds] \n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -230,7 +232,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
 
     /* prepare destination interface */
-    if ((src_idx = interface_index(sock_fd, dst_ifname)) < 0)
+    if ((dst_idx = interface_index(sock_fd, dst_ifname)) < 0)
         exit(EXIT_FAILURE);
 
     if (interface_addr(sock_fd, dst_ifname, dst_addr) < 0)
@@ -243,6 +245,7 @@ int main(int argc, char *argv[]) {
     s_addr.sll_ifindex  = src_idx;
     s_addr.sll_halen    = ETH_ALEN;
     memcpy(s_addr.sll_addr, dst_addr, ETH_ALEN);
+
 
     /* bind to interface */
     if (bind(sock_fd, (struct sockaddr *)&s_addr, sizeof(s_addr)) < 0)
@@ -271,7 +274,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
 
     /* prepare counters */
-    memset(&client_result, 0, sizeof(client_result));
+    client_result.sequence = 1;
 
     while (running) {
         *(int *)data_ptr = htonl(client_result.sequence++);

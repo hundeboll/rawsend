@@ -45,7 +45,8 @@ void print_result(struct raw_result *result)
     printf(" packets: %6u\n", result->packets);
     printf(" bytes:   %6u\n", result->bytes);
     printf(" rate:    %6.2f\n", rate);
-    printf(" loss:    %6.2f\n", 1 - (double)result->packets/(double)server_result.sequence);
+    printf(" loss:    %6.2f\n", 1 - (double)result->packets/(double)(server_result.sequence));
+    printf(" dups:    %6u\n", result->duplicates);
 }
 
 int open_socket(const char *ifname)
@@ -54,6 +55,8 @@ int open_socket(const char *ifname)
     int sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL)); 
     if (sock < 0)
         exit(EXIT_FAILURE);
+
+    return sock;
 
     /* set promiscuous mode */
     strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
@@ -199,19 +202,24 @@ int main(int argc, char *argv[]) {
             break;
 
         /* record timestamp on first received packet */
-        if (server_result.bytes == 0) {
+        if (server_result.packets == 0) {
             if (gettimeofday(&begin, 0) < 0)
                 exit(EXIT_FAILURE);
             printf("connect from ");
             print_mac(eth_hdr->h_source);
         }
 
+        seq = ntohl(*(unsigned int *)data_ptr);
+        if (seq > server_result.sequence) {
+            server_result.sequence = seq;
+        } else {
+            server_result.duplicates++;
+            continue;
+        }
+
         /* update counters */
         server_result.packets++;
         server_result.bytes += recv;
-        seq = ntohl(*(unsigned int *)data_ptr);
-        if (seq > server_result.sequence)
-            server_result.sequence = seq;
     }
 
     /* record timestamp */
@@ -224,6 +232,7 @@ int main(int argc, char *argv[]) {
     result->useconds = htonl(elapsed.tv_usec);
     result->packets = htonl(server_result.packets);
     result->bytes = htonl(server_result.bytes);
+    result->duplicates = htonl(server_result.duplicates);
 
     /* prepare header */
     memcpy(eth_hdr->h_dest, eth_hdr->h_source, ETH_ALEN);

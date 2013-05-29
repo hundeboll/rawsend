@@ -10,6 +10,7 @@ struct raw_result {
     unsigned int packets;
     unsigned int bytes;
     unsigned int sequence;
+    unsigned int duplicates;
 };
 
 #endif
